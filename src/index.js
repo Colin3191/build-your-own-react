@@ -34,6 +34,21 @@ function createDom(fiber) {
   return dom;
 }
 
+function commitRoot() {
+  commitWork(wipRoot.child);
+  wipRoot = null;
+}
+
+function commitWork(fiber) {
+  if (!fiber) {
+    return;
+  }
+  const domParent = fiber.parent.dom;
+  domParent.appendChild(fiber.dom);
+  commitWork(fiber.child);
+  commitWork(fiber.sibling);
+}
+
 function render(element, container) {
   wipRoot = {
     dom: container,
@@ -47,11 +62,14 @@ function render(element, container) {
 let nextUnitOfWork = null;
 let wipRoot = null;
 
-function wookLoop(deadline) {
+function workLoop(deadline) {
   let shouldYield = false;
   while (nextUnitOfWork && !shouldYield) {
     nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
     shouldYield = deadline.timeRemaining() < 1;
+  }
+  if (!nextUnitOfWork && wipRoot) {
+    commitRoot();
   }
   requestIdleCallback(workLoop);
 }
